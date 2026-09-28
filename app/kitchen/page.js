@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
-import { minutesSince } from "../../lib/format";
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState([]);
@@ -34,7 +33,7 @@ export default function KitchenPage() {
       if (!active) return;
       setOrders((current) => order.status === "served" ? current.filter((row) => row.id !== order.id) : current.map((row) => row.id === order.id ? order : row));
     }).subscribe((status) => { if (status === "CHANNEL_ERROR") setError("Live updates are unavailable. Refresh to check for new orders."); });
-    return () => { active = false; window.clearInterval(ticker); supabase.removeChannel(channel); };
+    return () => { active = false; supabase.removeChannel(channel); };
   }, []);
 
   async function changeStatus(order, status) {
@@ -51,6 +50,6 @@ export default function KitchenPage() {
 
   return <main className="kitchen-page"><header className="staff-topbar kitchen-bar"><Link href="/">Butter <span>&</span> Bloom</Link><p className="eyebrow">KITCHEN · SERVICE BOARD</p></header><div className="kitchen-head"><div><p className="eyebrow">MADE WITH CARE, SERVED WITH LOVE</p><h1>Order board</h1></div><span className="live-indicator">Live order feed</span></div>
     {error && <div className="kitchen-error" role="alert">{error}</div>}
-    <section className="kitchen-grid" aria-live="polite">{loading ? <div className="kitchen-empty"><h2>Opening the pass…</h2></div> : orders.length === 0 ? <div className="kitchen-empty"><h2>No active orders</h2><p>Enjoy the quiet while it lasts. 🎂</p></div> : orders.map((order) => <article key={order.id} className={`kitchen-card ${order.status}`}><div className="kitchen-card-head"><div><p className="eyebrow">TABLE</p><div className="table-number">{order.table_number}</div></div><div className="kitchen-time">{new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(order.created_at))}<br />{minutesSince(order.created_at)} min ago<br /><span className={`status-pill ${order.status}`}>{order.status}</span></div></div><ul>{(Array.isArray(order.items) ? order.items : []).map((item, index) => <li key={`${item.item_id}-${index}`}>{item.quantity} × {item.name}</li>)}</ul><div className="kitchen-actions">{order.status === "received" && <button type="button" onClick={() => changeStatus(order, "preparing")}>Start preparing</button>}<button type="button" onClick={() => changeStatus(order, "served")}>Served</button></div></article>)}</section>
+    <section className="kitchen-grid" aria-live="polite">{loading ? <div className="kitchen-empty"><h2>Opening the pass…</h2></div> : orders.length === 0 ? <div className="kitchen-empty"><h2>No active orders</h2><p>Enjoy the quiet while it lasts. 🎂</p></div> : orders.map((order) => <article key={order.id} className={`kitchen-card ${order.status}`}><div className="kitchen-card-head"><div><p className="eyebrow">TABLE</p><div className="table-number">{order.table_number}</div></div><div className="kitchen-time">{new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(order.created_at))}<br />{Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60000))} min ago<br /><span className={`status-pill ${order.status}`}>{order.status}</span></div></div><ul>{(Array.isArray(order.items) ? order.items : []).map((item, index) => <li key={`${item.item_id}-${index}`}>{item.quantity} × {item.name}</li>)}</ul><div className="kitchen-actions">{order.status === "received" && <button type="button" onClick={() => changeStatus(order, "preparing")}>Start preparing</button>}<button type="button" onClick={() => changeStatus(order, "served")}>Served</button></div></article>)}</section>
   </main>;
 }
